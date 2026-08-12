@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Vector store / generated data (regeneratable, don't version large binary indexes)
+data/vector_store/*
+!data/vector_store/.gitkeep
+
+# Uploaded documents (may be private/copyrighted — don't commit)
+data/documents/*
+!data/documents/.gitkeep
+
+# Logs
+*.log
+
+# OS
+.DS_Store
