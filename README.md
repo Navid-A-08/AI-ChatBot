@@ -1,6 +1,6 @@
 # Context-Aware AI Chatbot
 
-> Status: **Phase 0 complete** (repo skeleton, config, logging).
+> Status: **Phase 1 complete** (core conversational loop: Claude API + windowed context).
 > This README will grow into the full portfolio README as phases complete —
 > for now it's a working setup doc.
 
@@ -30,15 +30,31 @@ cp .env.example .env
 pytest -v
 ```
 
+## Running the chatbot
+
+```bash
+python -m ai_chatbot.cli
+```
+
+Type `exit` or `quit` to leave. Each turn is sent with a sliding window
+of the last 6 previous turns (see `context.py` for why this — and its
+limitations — are intentional for this phase).
+
 ## Project layout
 
 ```
 ai-chatbot/
-├── src/ai_chatbot/       # application package
-│   ├── config.py         # typed settings loaded from env/.env
-│   ├── logging_setup.py  # centralized logging config
-│   └── llm/               # LLM client code (Phase 1)
-├── tests/                 # pytest tests, mirrors src/ structure
+├── prompts/                # prompt content, separate from code
+│   └── system_prompt.md
+├── src/ai_chatbot/         # application package
+│   ├── config.py           # typed settings loaded from env/.env
+│   ├── logging_setup.py    # centralized logging config
+│   ├── prompts.py          # loads prompts/*.md
+│   ├── context.py          # windowed conversation history assembly
+│   ├── cli.py               # conversational loop entry point
+│   └── llm/
+│       └── claude_client.py # thin wrapper around the Anthropic SDK
+├── tests/                   # pytest tests, mirrors src/ structure
 ├── data/
 │   ├── documents/         # uploaded/ingested source docs (gitignored)
 │   └── vector_store/      # embedded vector index (gitignored, regeneratable)
@@ -51,8 +67,8 @@ ai-chatbot/
 | Phase | Status | Deliverable |
 |---|---|---|
 | 0 | ✅ Done | Repo skeleton, config, logging |
-| 1 | ⏳ Next | Core conversational loop (Claude API + basic context assembly) |
-| 2 | Planned | Memory system (short-term + long-term) |
+| 1 | ✅ Done | Core conversational loop (Claude API + windowed context) |
+| 2 | ⏳ Next | Memory system (short-term + long-term) |
 | 3 | Planned | RAG pipeline (ingest → chunk → embed → retrieve → cite) |
 | 4 | Planned | Context ranking + compression |
 | 5 | Planned | Evaluation framework |
