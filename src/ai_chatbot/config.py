@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-6"
     log_level: str = "INFO"
 
+    # Phase 4: Context ranking and compression
+    context_strategy: str = "window"  # "window" or "ranked"
+    max_context_tokens: int = 8000
+    max_history_turns: int = 6
+    rag_top_k: int = 3
+
+    # Phase 7: Multi-provider support
+    llm_provider: str = "claude"  # "claude" or "openai"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4"
+
 
 @lru_cache
 def get_settings() -> Settings:

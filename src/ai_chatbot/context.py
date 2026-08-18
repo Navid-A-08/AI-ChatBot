@@ -8,37 +8,28 @@ Why this exists:
     happens before the LLM call). Even at this early phase, we do NOT
     just dump the entire conversation history into every API call.
 
-How it works — sliding window:
+How it works — sliding window + memory + RAG:
     Keep only the most recent N turns (a "turn" = one user message +
-    one assistant reply). Older turns are dropped entirely.
+    one assistant reply). Older turns are dropped entirely, but
+    important facts are extracted to memory (Phase 2).
 
-    This is the simplest possible context management strategy, and
-    that's intentional for Phase 1 — it establishes the pattern
-    (there IS a context assembly step, it's not just "send everything")
-    without yet solving the hard problem of *which* older context
-    matters. That's exactly what later phases test:
+    Memory context (short-term and long-term) is injected into the
+    system prompt, so the model has access to relevant facts even
+    when they've fallen out of the sliding window.
 
-    Alternatives (deferred, not implemented here):
-    - Summarization: compress dropped turns into a running summary
-      instead of discarding them outright. Preserves more information
-      but costs an extra LLM call and introduces summarization drift.
-    - Relevance-based retrieval: pull back specific older turns if
-      they're relevant to the current message (this starts to overlap
-      with memory/RAG — Phases 2-4).
+    When documents are available, relevant chunks are retrieved via
+    RAG (Phase 3) and added to the context.
+
+Alternatives (deferred, not implemented here):
     - Token-based windowing (vs turn-count-based): windowing by token
       budget is more precise than turn count, since turns vary wildly
       in length. Turn-count is used here for simplicity; token-based
       windowing is a natural Phase 4 (context compression) upgrade.
-
-Trade-off being accepted right now:
-    Dropped turns are gone completely — if the user references
-    something from 10 messages ago and it fell out of the window, the
-    model has no way to know. This is a real, known limitation of
-    Phase 1, not an oversight. It's exactly the problem Phase 2
-    (memory) and Phase 4 (better context strategies) exist to address.
 """
 
 from dataclasses import dataclass, field
+from ai_chatbot.memory import MemoryManager
+from ai_chatbot.rag import RAGPipeline, RetrievedChunk
 
 
 @dataclass
@@ -53,13 +44,18 @@ class Turn:
 class ConversationHistory:
     """
     Holds the full conversation, and knows how to produce a windowed
-    view of it for sending to the LLM.
+    view of it for sending to the LLM, including memory context
+    and retrieved document chunks.
     """
 
     turns: list[Turn] = field(default_factory=list)
+    memory: MemoryManager = field(default_factory=MemoryManager)
+    rag: RAGPipeline = field(default_factory=RAGPipeline)
 
     def add_turn(self, user_message: str, assistant_reply: str) -> None:
         self.turns.append(Turn(user=user_message, assistant=assistant_reply))
+        # Process the turn to extract and store memories
+        self.memory.process_turn(user_message, assistant_reply)
 
     def windowed_messages(self, max_turns: int, current_user_message: str) -> list[dict]:
         """
@@ -86,3 +82,52 @@ class ConversationHistory:
 
         messages.append({"role": "user", "content": current_user_message})
         return messages
+
+    def get_memory_context(self) -> str:
+        """
+        Get memory context to inject into the system prompt.
+
+        Returns:
+            Formatted string with relevant memories from short-term
+            and long-term storage.
+        """
+        return self.memory.get_context()
+
+    def retrieve_documents(self, query: str, top_k: int = 3) -> list[RetrievedChunk]:
+        """
+        Retrieve relevant document chunks for a query.
+
+        Args:
+            query: The search query (typically the user's message).
+            top_k: Number of chunks to retrieve.
+
+        Returns:
+            List of RetrievedChunk objects.
+        """
+        return self.rag.retrieve(query, top_k=top_k)
+
+    def format_retrieved_context(self, chunks: list[RetrievedChunk]) -> str:
+        """
+        Format retrieved chunks into a context string.
+
+        Args:
+            chunks: List of RetrievedChunk objects.
+
+        Returns:
+            Formatted string suitable for injection into the prompt.
+        """
+        if not chunks:
+            return ""
+
+        parts = ["## Relevant Documents\n"]
+        for i, chunk in enumerate(chunks, 1):
+            source_info = f"(Source: {chunk.source}"
+            if chunk.page is not None:
+                source_info += f", Page {chunk.page}"
+            source_info += ")"
+
+            parts.append(f"### Excerpt {i} {source_info}")
+            parts.append(chunk.content)
+            parts.append("")
+
+        return "\n".join(parts)
