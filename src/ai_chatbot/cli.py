@@ -16,7 +16,7 @@ import logging
 from ai_chatbot.config import get_settings
 from ai_chatbot.context import ConversationHistory
 from ai_chatbot.context_ranker import ContextRanker
-from ai_chatbot.llm.claude_client import ClaudeClient
+from ai_chatbot.llm.base import LLMConfig, default_provider_registry
 from ai_chatbot.logging_setup import setup_logging
 from ai_chatbot.prompts import load_prompt
 
@@ -27,9 +27,35 @@ def run_chat_loop() -> None:
     logger = logging.getLogger(__name__)
 
     base_system_prompt = load_prompt("system_prompt")
-    client = ClaudeClient(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
     history = ConversationHistory()
     ranker = ContextRanker(max_tokens=settings.max_context_tokens)
+
+    # Create LLM provider based on config
+    if settings.llm_provider == "nvidia":
+        llm_config = LLMConfig(
+            model=settings.nvidia_model,
+            api_key=settings.nvidia_api_key,
+            max_tokens=1024,
+            extra_params={"base_url": settings.nvidia_base_url},
+        )
+    elif settings.llm_provider == "openai":
+        llm_config = LLMConfig(
+            model=settings.openai_model,
+            api_key=settings.openai_api_key,
+            max_tokens=1024,
+        )
+    else:
+        llm_config = LLMConfig(
+            model=settings.anthropic_model,
+            api_key=settings.anthropic_api_key,
+            max_tokens=1024,
+        )
+
+    provider = default_provider_registry.create_provider(settings.llm_provider, llm_config)
+    if provider is None:
+        raise ValueError(f"Unknown LLM provider: {settings.llm_provider}")
+
+    logger.info("Using LLM provider: %s (%s)", provider.provider_name, provider.model)
 
     # Ingest documents on startup if any exist
     logger.info("Ingesting documents...")
@@ -38,7 +64,8 @@ def run_chat_loop() -> None:
         logger.info("Ingested %d document chunks", chunks_ingested)
         print(f"Loaded {chunks_ingested} document chunks for RAG.\n")
 
-    print(f"AI Chatbot (Phase 4) — context strategy: {settings.context_strategy}")
+    print(f"AI Chatbot — provider: {provider.provider_name}, model: {provider.model}")
+    print(f"Context strategy: {settings.context_strategy}")
     print("Type 'exit' or 'quit' to leave.\n")
 
     while True:
@@ -85,9 +112,10 @@ def run_chat_loop() -> None:
             messages = history.windowed_messages(settings.max_history_turns, user_input)
 
         try:
-            reply = client.send(messages, system_prompt)
+            response = provider.send_message(messages, system_prompt)
+            reply = response.text
         except Exception:
-            logger.exception("Error calling Claude API")
+            logger.exception("Error calling LLM API")
             print("Assistant: (error contacting the model — see logs)\n")
             continue
 

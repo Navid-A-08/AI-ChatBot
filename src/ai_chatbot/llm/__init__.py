@@ -26,6 +26,13 @@ def _register_default_providers():
     except ImportError:
         pass
 
+    # Try to register NVIDIA NIM if available
+    try:
+        from ai_chatbot.llm.nvidia_provider import NvidiaProvider
+        default_provider_registry.register("nvidia", NvidiaProvider)
+    except ImportError:
+        pass
+
 _register_default_providers()
 
 __all__ = [

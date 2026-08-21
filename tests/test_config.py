@@ -30,9 +30,18 @@ def test_settings_loads_with_required_env(monkeypatch):
 
 def test_settings_raises_when_api_key_missing(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_PROVIDER", "claude")
 
-    with pytest.raises(ValidationError):
-        Settings(_env_file=None)
+    # anthropic_api_key is no longer a required field (since we support
+    # multiple providers), but get_settings() validates that the chosen
+    # provider has its API key.
+    from ai_chatbot.config import get_settings
+    get_settings.cache_clear()
+
+    with pytest.raises(ValueError, match="ANTHROPIC_API_KEY is required"):
+        get_settings()
 
 
 def test_settings_respects_custom_model(monkeypatch):

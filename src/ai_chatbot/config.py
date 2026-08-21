@@ -47,7 +47,7 @@ class Settings(BaseSettings):
         extra="ignore",  # ignore unrelated env vars instead of erroring
     )
 
-    anthropic_api_key: str
+    anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
     log_level: str = "INFO"
 
@@ -58,9 +58,21 @@ class Settings(BaseSettings):
     rag_top_k: int = 3
 
     # Phase 7: Multi-provider support
-    llm_provider: str = "claude"  # "claude" or "openai"
+    llm_provider: str = "claude"  # "claude", "openai", or "nvidia"
     openai_api_key: str = ""
     openai_model: str = "gpt-4"
+    nvidia_api_key: str = ""
+    nvidia_model: str = "nvidia/nemotron-3-ultra-550b-a55b"
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+
+    def validate_provider_api_key(self) -> None:
+        """Check that the selected provider has an API key configured."""
+        if self.llm_provider == "claude" and not self.anthropic_api_key:
+            raise ValueError("ANTHROPIC_API_KEY is required when LLM_PROVIDER=claude")
+        if self.llm_provider == "openai" and not self.openai_api_key:
+            raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
+        if self.llm_provider == "nvidia" and not self.nvidia_api_key:
+            raise ValueError("NVIDIA_API_KEY is required when LLM_PROVIDER=nvidia")
 
 
 @lru_cache
@@ -69,8 +81,8 @@ def get_settings() -> Settings:
     Return a cached Settings instance.
 
     Cached (via lru_cache) so we parse env vars once, not on every call.
-    If ANTHROPIC_API_KEY is missing or empty, this raises a clear
-    pydantic ValidationError at startup rather than failing later with
-    a confusing API error.
+    Validates that the selected provider has its API key configured.
     """
-    return Settings()
+    settings = Settings()
+    settings.validate_provider_api_key()
+    return settings
