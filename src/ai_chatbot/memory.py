@@ -100,7 +100,7 @@ class MemoryManager:
         except Exception:
             logger.exception("Failed to save long-term memory")
 
-    def extract_facts(self, user_message: str, assistant_reply: str) -> list[str]:
+    def extract_facts(self, user_message, assistant_reply) -> list[str]:
         """
         Extract memorable facts from a conversation turn.
 
@@ -110,6 +110,10 @@ class MemoryManager:
         Returns:
             List of extracted fact strings.
         """
+        # Ensure inputs are strings
+        user_message = str(user_message) if not isinstance(user_message, str) else user_message
+        assistant_reply = str(assistant_reply) if not isinstance(assistant_reply, str) else assistant_reply
+
         facts = []
 
         # Simple patterns for fact extraction
