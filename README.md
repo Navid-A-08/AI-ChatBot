@@ -284,7 +284,3 @@ pytest tests/test_research.py -v
 ## License
 
 Free to use. You may use, copy, modify, and share this project for any purpose.
-
-## Contributing
-
-Contributions are welcome! Please see CONTRIBUTING.md for guidelines.
