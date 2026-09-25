@@ -281,21 +281,6 @@ pytest tests/test_llm_providers.py -v
 pytest tests/test_research.py -v
 ```
 
-## Future Enhancements
-
-Potential improvements for a production system:
-
-1. **Streaming responses** for better UX
-2. **Async operations** for better performance
-3. **Web UI** (Gradio/Streamlit)
-4. **Vector database options** (Pinecone, Weaviate)
-5. **Advanced chunking strategies** (semantic, recursive)
-6. **Conversation persistence** to database
-7. **User authentication** and multi-tenancy
-8. **Cost tracking** and optimization
-9. **Monitoring and observability**
-10. **CI/CD pipeline** for automated testing and deployment
-
 ## License
 
 Free to use. You may use, copy, modify, and share this project for any purpose.
