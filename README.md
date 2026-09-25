@@ -298,7 +298,7 @@ Potential improvements for a production system:
 
 ## License
 
-MIT License
+Free to use. You may use, copy, modify, and share this project for any purpose.
 
 ## Contributing
 
