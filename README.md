@@ -32,8 +32,8 @@ selected, prioritized, compressed, and assembled before it reaches the LLM.
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd ai-chatbot
+git clone https://github.com/Navid-A-08/AI-ChatBot.git
+cd AI-ChatBot
 
 # Create virtual environment
 python -m venv .venv
@@ -283,4 +283,4 @@ pytest tests/test_research.py -v
 
 ## License
 
-Free to use. You may use, copy, modify, and share this project for any purpose.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full text.
